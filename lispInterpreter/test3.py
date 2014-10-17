@@ -2,8 +2,10 @@ import compiler
 
 # operations completed: arithmetic, lambda
 #contentReadInit = '(+ (- ((lambda (a) (* 2 a)) 2) 3) 2)'
-#contentReadInit = '(+ (lambda (a b) (+ (* 2 a) b) 5 6) 2)'
-contentReadInit = '(define (add1 x) (+ 1 x)) (add1 x)'
+#contentReadInit = '((lambda (x) (+ x 3)) 2)'
+#contentReadInit =  '(+ ((define (add1 x) (+ 1 x)) (add1 3)) ((lambda (x) (+ x 3)) (abs -4)))'
+contentReadInit = '(list 1 2 (+ 7 2) 4)'
+
 
 varDictionary = {}
 
@@ -50,8 +52,10 @@ def checkUndefined(toTest):
 		return False
 
 def evaluate(listInput, stateDict):
+
 	# base case
 	if not type(listInput) is list:
+
 		return listInput
 
 	# operations subsection
@@ -77,31 +81,55 @@ def evaluate(listInput, stateDict):
 							toRedefine[i] = replaceVars(toRedefine[i], lambdaDict)
 						elif toRedefine[i] in lambdaDict:
 							toRedefine[i] = lambdaDict[toRedefine[i]]
+				else:
+					toRedefine = lambdaDict[toRedefine]
 				return toRedefine
 			return evaluate(replaceVars(toRedefine, lambdaDict), stateDict)
 
 		# handle define values
 		elif operator[0] == 'define':
 			if type(operator[1]) is list:
-				operator[1][0]
+				forDict = ['lambda']
+				# create the sublist of variables
+				forDictVars = []
+				for i in range(1, len(operator[1])):
+					forDictVars.append(operator[1][i])
+				forDict.append(forDictVars)
+				# create the sublist of the substitute equation
+				forDict.append(operator[2])
+				stateDict[operator[1][0]] = [forDict]
+				return evaluate(listInput[1:], stateDict)
 			elif type(operator[1]) is str:
 				stateDict[operator[1]] = evaluate(operator[2], stateDict)
 				return evaluate(listInput[1:], stateDict)
+
+		elif operator[0] == 'list':
+			buildList = []
+			for i in range(1, len(operator)):
+				buildList.append(i)
+			return buildList
 
 		# just recurse on the first item of listInput and return that, to work down nested lists
 		else:
 			return evaluate(operator, stateDict)
 
 	# basic string operations
-	if type(operator) is str:
+	elif type(operator) is str:
 		if operator in '+/-*':
 			result = eval(str(evaluate((listInput[1]), stateDict)) + operator + str(evaluate((listInput[2]), stateDict)))
 			return result
-
+		elif operator == 'abs':
+			return eval(evaluate(str(listInput[1]), stateDict))
 		# recurse if nested single variable in a list
-		elif len(operator) == 1 and operator in stateDict:
-			return stateDict[operator]
+		elif operator in stateDict:
+			return evaluate(stateDict[operator] + listInput[1:], stateDict)
 
+	# to catch just in case there are any floats that slip through
+	elif type(operator) is float:
+		return operator
+
+	# for programming review purposes
+	print "WARNING! Last catch:", listInput, "and dict:", stateDict
 
 def wrapperRun(contentInput):
 	print 'Lisp input is:', contentInput
