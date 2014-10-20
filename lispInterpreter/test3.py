@@ -4,7 +4,10 @@ import compiler
 #contentReadInit = '(+ (- ((lambda (a) (* 2 a)) 2) 3) 2)'
 #contentReadInit = '((lambda (x) (+ x 3)) 2)'
 #contentReadInit =  '(+ ((define (add1 x) (+ 1 x)) (add1 3)) ((lambda (x) (+ x 3)) (abs -4)))'
-contentReadInit = '(list 1 2 (+ 7 2) 4)'
+#contentReadInit = '(list 1 2 (+ 7 2) 4)'
+#contentReadInit = '(if (not (= 1 1)) 1 0)'
+#contentReadInit = "(cond ((> 3 4) 'greater) ((< 3 1) 'less) ((< 3 2) 'mea) ((> 3 12) 'lests) (else (+ 1 1)))"
+contentReadInit = '(else (+ 1 1))'
 
 
 varDictionary = {}
@@ -52,11 +55,18 @@ def checkUndefined(toTest):
 		return False
 
 def evaluate(listInput, stateDict):
-
 	# base case
 	if not type(listInput) is list:
-
-		return listInput
+		try:
+			return stateDict[listInput]
+		except KeyError:
+			try:
+				return float(listInput)
+			except ValueError:
+				if listInput[0] == '"' or listInput[0] == "'":
+					return listInput[1:]
+				else:
+					return listInput
 
 	# operations subsection
 	operator = listInput[0]
@@ -115,21 +125,41 @@ def evaluate(listInput, stateDict):
 
 	# basic string operations
 	elif type(operator) is str:
-		if operator in '+/-*':
-			result = eval(str(evaluate((listInput[1]), stateDict)) + operator + str(evaluate((listInput[2]), stateDict)))
-			return result
+		if operator in '+/-*<=>=':
+			if operator == '=':
+				operator += operator
+			return eval(str(evaluate((listInput[1]), stateDict)) + operator + str(evaluate((listInput[2]), stateDict)))
 		elif operator == 'abs':
-			return eval(evaluate(str(listInput[1]), stateDict))
+			return abs(float(evaluate(listInput[1], stateDict)))
 		# recurse if nested single variable in a list
 		elif operator in stateDict:
 			return evaluate(stateDict[operator] + listInput[1:], stateDict)
+		# controlling for not
+		elif operator == 'not':
+			if evaluate(str(listInput[1]), stateDict) is True:
+				return False
+			else:
+				return True
+		elif operator == 'if':
+			if evaluate(str(listInput[1]), stateDict) is True:
+				return evaluate(str(listInput[2]), stateDict)
+			else:
+				return evaluate(str(listInput[3]), stateDict)
+		elif operator == 'else':
+			return evaluate(listInput[1], stateDict)
+		elif operator == 'cond':
+			for i in listInput[1:]:
+				if evaluate(str(i), stateDict) is True:
+					return evaluate(str(i[1]), stateDict)
+				elif i[0] == 'else':
+					return evaluate(i[1], stateDict)
 
 	# to catch just in case there are any floats that slip through
 	elif type(operator) is float:
 		return operator
 
 	# for programming review purposes
-	print "WARNING! Last catch:", listInput, "and dict:", stateDict
+	print "WARNING! Failed parse.\nLast catch:", listInput, "\nWith current dictionary:", stateDict
 
 def wrapperRun(contentInput):
 	print 'Lisp input is:', contentInput
