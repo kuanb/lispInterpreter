@@ -7,7 +7,9 @@ import compiler
 #contentReadInit = '(list 1 2 (+ 7 2) 4)'
 #contentReadInit = '(if (not (= 1 1)) 1 0)'
 #contentReadInit = "(cond ((> 3 4) 'greater) ((< 3 1) 'less) ((< 3 2) 'mea) ((> 3 12) 'lests) (else (+ 1 1)))"
-contentReadInit = '(else (+ 1 1))'
+contentReadInit = "(define fib (lambda (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1 )) (fib (- n 2)))))))";
+contentReadInit = "(define x 2)"
+# '(quote well)'
 
 
 varDictionary = {}
@@ -55,6 +57,7 @@ def checkUndefined(toTest):
 		return False
 
 def evaluate(listInput, stateDict):
+
 	# base case
 	if not type(listInput) is list:
 		try:
@@ -67,6 +70,8 @@ def evaluate(listInput, stateDict):
 					return listInput[1:]
 				else:
 					return listInput
+	if len(listInput) is 0:
+		return None
 
 	# operations subsection
 	operator = listInput[0]
@@ -98,7 +103,11 @@ def evaluate(listInput, stateDict):
 
 		# handle define values
 		elif operator[0] == 'define':
-			if type(operator[1]) is list:
+			if len(operator[1]) is 1:
+				stateDict[operator[1][0]] = evaluate(operator[2], stateDict)
+				listInput.pop(0)
+				return evaluate(listInput, stateDict)
+			elif type(operator[1]) is list and len(operator[1]) > 1:
 				forDict = ['lambda']
 				# create the sublist of variables
 				forDictVars = []
@@ -108,10 +117,16 @@ def evaluate(listInput, stateDict):
 				# create the sublist of the substitute equation
 				forDict.append(operator[2])
 				stateDict[operator[1][0]] = [forDict]
-				return evaluate(listInput[1:], stateDict)
-			elif type(operator[1]) is str:
+				listInput.pop(0)
+				return evaluate(listInput, stateDict)
+			else:
 				stateDict[operator[1]] = evaluate(operator[2], stateDict)
-				return evaluate(listInput[1:], stateDict)
+				listInput.pop(0)
+				return evaluate(listInput, stateDict)
+
+		elif operator[0] == 'set!':
+			if operator[1] in stateDict:
+				print "WO"
 
 		elif operator[0] == 'list':
 			buildList = []
@@ -131,10 +146,12 @@ def evaluate(listInput, stateDict):
 			return eval(str(evaluate((listInput[1]), stateDict)) + operator + str(evaluate((listInput[2]), stateDict)))
 		elif operator == 'abs':
 			return abs(float(evaluate(listInput[1], stateDict)))
-		# recurse if nested single variable in a list
+		elif operator == 'quote':
+			return str(listInput[1])
 		elif operator in stateDict:
-			return evaluate(stateDict[operator] + listInput[1:], stateDict)
-		# controlling for not
+			listInput.pop(0)
+			newInput = [stateDict[operator]] + listInput
+			return evaluate(newInput, stateDict)
 		elif operator == 'not':
 			if evaluate(str(listInput[1]), stateDict) is True:
 				return False
