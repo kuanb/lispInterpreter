@@ -7,9 +7,13 @@ import compiler
 #contentReadInit = '(list 1 2 (+ 7 2) 4)'
 #contentReadInit = '(if (not (= 1 1)) 1 0)'
 #contentReadInit = "(cond ((> 3 4) 'greater) ((< 3 1) 'less) ((< 3 2) 'mea) ((> 3 12) 'lests) (else (+ 1 1)))"
-contentReadInit = "(define fib (lambda (n) (if (= n 0) 0 (if (= n 1) 1 (+ (fib (- n 1 )) (fib (- n 2)))))))";
-contentReadInit = "(define x 2)"
-# '(quote well)'
+#contentReadInit = "(define (add x) (+ 1 x)) (add 2)"
+#contentReadInit = "((define x 3) (set! x 4) (+ 1 x))"
+#contentReadInit = "((lambda (n) (if (<= n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))) 7)"
+#contentReadInit = "((lambda (x) (+ x 2)) 2)"
+#contentReadInit = "(define f 3) (set! f (+ f (- ((lambda x (- 40 x)) 3) 2))) f"
+contentReadInit = '(let ([x (+ 2 2)]) x)'
+# contentReadInit = "(define x (+ 2 2)) x"
 
 
 varDictionary = {}
@@ -17,7 +21,9 @@ varDictionary = {}
 def readContentIn(contentRead):
 
 	contentRead = contentRead.replace('(', ' ( ')
+	contentRead = contentRead.replace('[', ' ( ')
 	contentRead = contentRead.replace(')', ' ) ')
+	contentRead = contentRead.replace(']', ' ) ')
 	contentRead = contentRead.split(' ')
 	contentRead = filter(lambda a: a != '', contentRead)
 	return contentRead
@@ -116,7 +122,7 @@ def evaluate(listInput, stateDict):
 				forDict.append(forDictVars)
 				# create the sublist of the substitute equation
 				forDict.append(operator[2])
-				stateDict[operator[1][0]] = [forDict]
+				stateDict[operator[1][0]] = forDict
 				listInput.pop(0)
 				return evaluate(listInput, stateDict)
 			else:
@@ -126,7 +132,18 @@ def evaluate(listInput, stateDict):
 
 		elif operator[0] == 'set!':
 			if operator[1] in stateDict:
-				print "WO"
+				listInput[0][0] = 'define'
+				return evaluate(listInput, stateDict)
+			else:
+				print "set! refers to undefined variable."
+				return None
+
+		elif operator[0] == 'let':
+			tempDefineOperation = ['define']
+			for i in operator[1][0]:
+				tempDefineOperation.append(i)
+			listInput[0][0] = tempDefineOperation
+			return evaluate(listInput, stateDict)
 
 		elif operator[0] == 'list':
 			buildList = []
@@ -144,6 +161,8 @@ def evaluate(listInput, stateDict):
 			if operator == '=':
 				operator += operator
 			return eval(str(evaluate((listInput[1]), stateDict)) + operator + str(evaluate((listInput[2]), stateDict)))
+		elif operator == 'lambda':
+			return evaluate([listInput], stateDict)
 		elif operator == 'abs':
 			return abs(float(evaluate(listInput[1], stateDict)))
 		elif operator == 'quote':
@@ -183,6 +202,6 @@ def wrapperRun(contentInput):
 	read = ['('] + readContentIn(contentInput) + [')']
 	parsedList, _ = parseContent('', read)
 	print 'Parsed list is:', parsedList
-	return str('The answer is: ' + str(evaluate(parsedList, {})))
+	return str('Final output: ' + str(evaluate(parsedList, {})))
 
 print wrapperRun(contentReadInit)
