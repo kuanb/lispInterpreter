@@ -7,13 +7,13 @@ import compiler
 #contentReadInit = '(list 1 2 (+ 7 2) 4)'
 #contentReadInit = '(if (not (= 1 1)) 1 0)'
 #contentReadInit = "(cond ((> 3 4) 'greater) ((< 3 1) 'less) ((< 3 2) 'mea) ((> 3 12) 'lests) (else (+ 1 1)))"
-#contentReadInit = "(define (add x) (+ 1 x)) (add 2)"
+contentReadInit = "(define (add x) (+ 1 x)) (add 2)"
 #contentReadInit = "((define x 3) (set! x 4) (+ 1 x))"
 #contentReadInit = "((lambda (n) (if (<= n 2) 1 (+ (fib (- n 1)) (fib (- n 2))))) 7)"
 #contentReadInit = "((lambda (x) (+ x 2)) 2)"
 #contentReadInit = "(define f 3) (set! f (+ f (- ((lambda x (- 40 x)) 3) 2))) f"
 #contentReadInit = '(let ([x (+ 2 2)]) x)'
-contentReadInit = "4"
+# contentReadInit = "4"
 
 
 varDictionary = {}

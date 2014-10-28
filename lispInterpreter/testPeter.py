@@ -113,7 +113,8 @@ def lisp_eval_special(sexp, env):
         if is_symbol(name): # is a Python string
             env[name] = value
         elif type(name) is list:
-            fn, *args = name
+            fn = name[0]
+            args = name[1:]
             env[fn] = ["lambda", args, value]
         return value
 
