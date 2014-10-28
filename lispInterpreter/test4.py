@@ -199,8 +199,8 @@ def evaluate(listInput, stateDict):
 
 def wrapperRun(contentInput):
 	print 'Lisp input is:', contentInput
-	#read = ['('] + readContentIn(contentInput) + [')']
-	read = readContentIn(contentInput)
+	read = ['('] + readContentIn(contentInput) + [')']
+	# read = readContentIn(contentInput)
 	parsedList, _ = parseContent('', read)
 	print 'Parsed list is:', parsedList
 	return str('Final output: ' + str(evaluate(parsedList, {})))
