@@ -72,7 +72,12 @@ def geEqual(args):
     return reduce(lambda x, y: x==y, args)
 
 def geAbs(args):
-    return abs(args)
+    try:
+        assert len(args) == 1
+        return abs(args[0])
+    except AssertionError:
+        print "Cannot take abs() of ", args
+        return None
 
 def geCar(args):
     return args[0]
@@ -203,7 +208,6 @@ def lisp_eval_special(sexp, env):
         return env
 
     # if operator == "begin": pass
-
     if operator[0] == "lambda":
         return evalApply(operator, body, env)
 
@@ -221,11 +225,16 @@ def evalApply(fn, args, env):
             return lisp_eval(body, new_env)
     except TypeError:
         # fn is primitive function
-        return fn(args)
+        cleanArgs = []
+        for i in args:
+            cleanArgs.append(lisp_eval(i, env))
+        return fn(cleanArgs)
 
 
 # contentReadInit = "(if (= 1 1) (+ 2 3) (+ 0 0))"
 # contentReadInit = "(define (con x y) (+ x y)) (con 3 2)"
+# contentReadInit = '(define (add1 x) (+ 1 x)) (+ (add1 3) ((lambda (x) (+ x 3)) (abs -4)))'
+# contentReadInit = '(+ 3 ((lambda (x) (+ x 3)) (abs -23)))'
 contentReadInit = "(define (con x y) (+ x y)) (con 3 ((lambda (x) (+ x 3)) 3))"
 
 
