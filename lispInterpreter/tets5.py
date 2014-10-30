@@ -69,7 +69,19 @@ def geDivide(args):
     return reduce(lambda x, y: x/y, args)
 
 def geEqual(args):
-    return reduce(lambda x, y: x==y, args)
+    return args[1:] == args[:-1]
+
+def geGreater(args):
+    return args[1:] < args[:-1]
+
+def geLess(args):
+    return args[1:] > args[:-1]
+
+def geGreaterEq(args):
+    return args[1:] <= args[:-1]
+
+def geLessEq(args):
+    return args[1:] >= args[:-1]
 
 def geAbs(args):
     try:
@@ -91,6 +103,10 @@ globalEnv = {
     "*": geMultiply,
     "/": geDivide,
     "=": geEqual,
+    ">": geGreater,
+    "<": geLess,
+    ">=": geGreaterEq,
+    "<=": geLessEq,
     "abs": geAbs,
     "car": geCar,
     "cdr": geCdr,
@@ -146,9 +162,14 @@ def lisp_boolean(x):
 
 def lisp_eval(sexp, env):
     if type(sexp) is list:
-        return lisp_eval_list(sexp, env)
+        result = lisp_eval_list(sexp, env)
     else:
-        return lisp_eval_atom(sexp, env)
+        result = lisp_eval_atom(sexp, env)
+    if result is None:
+        print "ERROR: S-expression", sexp, "has failed."
+        return None
+    else:
+        return result
 
 # atoms
 def lisp_eval_atom(sexp, env):
@@ -185,7 +206,10 @@ def lisp_eval_special(sexp, env):
     body = sexp[1:]
 
     if operator == "if":
-        cond, yes, no = body
+        if body[0] == 'not':
+            cond, no, yes = body[1:]   # reverse no and yes cases to handle opposite not
+        else:
+            cond, yes, no = body
         if lisp_boolean(lisp_eval(cond, env)):
             return lisp_eval(yes, env)
         elif not lisp_boolean(lisp_eval(cond, env)):
@@ -194,10 +218,10 @@ def lisp_eval_special(sexp, env):
             print "Boolean failed to return T/F; returning None."
             return None
 
-    if operator == "quote":
+    elif operator == "quote":
         return body[0]
 
-    if operator == "define":
+    elif operator == "define":
         name, value = body
         if is_symbol(name):
             env[name] = lisp_eval(value, env)
@@ -207,17 +231,43 @@ def lisp_eval_special(sexp, env):
             env[fn] = ["lambda", args, value]
         return env
 
-    # if operator == "begin": pass
-    if operator[0] == "lambda":
+    elif operator[0] == "lambda":
         return evalApply(operator, body, env)
 
-    #     return sexp
+    # if operator == "begin": pass
+
+    if operator == "set!":
+        variable, value = body
+        if variable in env:
+            env[variable] = value
+            return env
+        else:
+            print "ERROR: Variable", variable, "has not been defined yet."
+            return None
+
+    if operator == "let":
+        nameList = []
+        bodyList = []
+        for i in body[0]:
+            name, value = i
+            nameList.append(name)
+            bodyList.append(lisp_eval(value, env))
+
+        try:
+            assert len(body[1:]) == 1
+            fn = ['lambda', nameList, body[1]]
+            args = bodyList
+            return evalApply(fn, args, env)
+        except AssertionError:
+            print "ERROR: Too many elements in body,", body[1:]
+            return None
 
 def evalApply(fn, args, env):
     try:
         fn[0]
         if fn[0] == 'lambda':
-            variables, body = fn[1:]
+            variables = fn[1]
+            body = fn[-1]
             new_env = copy(env)
             assert(fn and len(variables) == len(args))
             for (variable, value) in zip(variables, args):
@@ -231,11 +281,14 @@ def evalApply(fn, args, env):
         return fn(cleanArgs)
 
 
-# contentReadInit = "(if (= 1 1) (+ 2 3) (+ 0 0))"
+# contentReadInit = "(define (fib n) (if (< n 2) n (+ (fib (- n 1)) (fib (- n 2))))) (fib 13)"
 # contentReadInit = "(define (con x y) (+ x y)) (con 3 2)"
 # contentReadInit = '(define (add1 x) (+ 1 x)) (+ (add1 3) ((lambda (x) (+ x 3)) (abs -4)))'
 # contentReadInit = '(+ 3 ((lambda (x) (+ x 3)) (abs -23)))'
-contentReadInit = "(define (con x y) (+ x y)) (con 3 ((lambda (x) (+ x 3)) 3))"
+# contentReadInit = "(define (con x y) (+ x y)) (con 3 ((lambda (x) (+ x 3)) 3))"
+# contentReadInit = "((lambda (x) (* x x)) 5)"
+# contentReadInit = "(let ((x 1)(w 3)(e 4)) (+ x e w))"
+contentReadInit = "(define g 3) (set! g 12) g"
 
 
 def wrapperRun(contentInput, dictIn):
@@ -250,7 +303,8 @@ def wrapperRun(contentInput, dictIn):
         for com in parsedList[:-1]:
             print "Processing component: ", com
             newDic = lisp_eval(com, superGlobal)
-            superGlobal = dict(superGlobal.items() + newDic.items())
+            if not newDic is None:
+                superGlobal = dict(superGlobal.items() + newDic.items())
         print "Final assembly with last component: ", parsedList[-1]
         return str('Final output: ' + str(lisp_eval(parsedList[-1], superGlobal)))
     else:
